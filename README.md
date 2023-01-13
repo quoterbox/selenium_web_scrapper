@@ -2,7 +2,7 @@
 
 ## Description of the crawler
 
-1. This is a simple Python class to get startups from any website without API.
+1. This is a simple Python class to get data from any website without API.
 2. GPRScrapper makes use Selenium library for Python and chromedriver as well(or any other for your web browser).
 3. GPRScrapper allows you to receive data in the desired language.
 4. It's easy to use in any browser with XPATH copy and paste.

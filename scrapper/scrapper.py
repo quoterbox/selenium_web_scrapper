@@ -136,7 +136,7 @@ class Scrapper:
     def __set_scroll_options(self, scroll_options: {}):
         self.scroll_options = scroll_options
 
-    def __get_reviews_from_app(self, website_link: str) -> []:
+    def __get_data_from_app(self, website_link: str) -> []:
 
         # Step 1
         self.driver.get(website_link)
@@ -340,7 +340,7 @@ class Scrapper:
     def run(self, app_links: []):
         for app_link in app_links:
             print("-- Start scrapping web items from: %s --" % app_link)
-            self.__webdata_items += self.__get_reviews_from_app(app_link)
+            self.__webdata_items += self.__get_data_from_app(app_link)
 
         self.__sleep(*self.time_options["delay_before_close"])
         self.driver.close()

@@ -95,7 +95,7 @@ acquire_startups_scrapper = Scrapper(
             "password": os.getenv("PASSWORD"),
         },
         # 0 - maximum
-        "count_items": 15,
+        "count_items": 3000,
         "items_class": ".projects-list .project-item",
         # you should copy these xpaths from your browser (right click and select "Inspect element")
         "xpath_options": {

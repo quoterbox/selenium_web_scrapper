@@ -32,46 +32,46 @@ class Scrapper:
         "password": "",
     }
     xpath_options = {
-        "login_xpath": "",
-        "password_xpath": "",
-        "login_button_xpath": "",
-        "next_page_link_xpath": "",
+        "login_xpath": {"XPATH": ""},
+        "password_xpath": {"XPATH": ""},
+        "login_button_xpath": {"XPATH": ""},
+        "next_page_link_xpath": {"XPATH": ""},
         "first_item": {
-            "item_body": "",
-            "item_name": "",
-            "location": "",
-            "detail_link": "",
+            "item_body": {"XPATH": ""},
+            "item_name": {"XPATH": ""},
+            "location": {"XPATH": ""},
+            "detail_link": {"XPATH": ""},
         },
         "detail_fields": {
-            "asking_price": "",
-            "asking_price_reasoning": "",
-            "date_founded": "",
-            "desc_title": "",
-            "description": "",
-            "business_model": "",
-            "tech_stack": "",
-            "product_competitors": "",
-            "growth_opportunity": "",
-            "key_assets": "",
-            "reason_selling": "",
-            "financing": "",
-            "ttm_gross_revenue": "",
-            "ttm_net_profit": "",
-            "last_months_gross_revenue": "",
-            "last_months_net_profit": "",
-            "Customers": "",
-            "annual_recurring_revenue": "",
-            "annual_growth_rate": "",
+            "asking_price": {"XPATH": ""},
+            "asking_price_reasoning": {"XPATH": ""},
+            "date_founded": {"XPATH": ""},
+            "desc_title": {"XPATH": ""},
+            "description": {"XPATH": ""},
+            "business_model": {"XPATH": ""},
+            "tech_stack": {"XPATH": ""},
+            "product_competitors": {"XPATH": ""},
+            "growth_opportunity": {"XPATH": ""},
+            "key_assets": {"XPATH": ""},
+            "reason_selling": {"XPATH": ""},
+            "financing": {"XPATH": ""},
+            "ttm_gross_revenue": {"XPATH": ""},
+            "ttm_net_profit": {"XPATH": ""},
+            "last_months_gross_revenue": {"XPATH": ""},
+            "last_months_net_profit": {"XPATH": ""},
+            "Customers": {"XPATH": ""},
+            "annual_recurring_revenue": {"XPATH": ""},
+            "annual_growth_rate": {"XPATH": ""},
         },
         "second_item": {
-            "item_body": "",
+            "item_body": {"XPATH": ""},
         },
     }
     regexp_xpath_options = {
-        "item_body": "",
-        "item_name": "",
-        "location": "",
-        "detail_link": "",
+        "item_body": {"XPATH": ""},
+        "item_name": {"XPATH": ""},
+        "location": {"XPATH": ""},
+        "detail_link": {"XPATH": ""},
     }
     time_options = {
         "delay_before_open_modal": [5, 10],
@@ -100,16 +100,28 @@ class Scrapper:
         self.__set_scroll_options(options["scroll_options"])
 
         self.__main_xpath = self.__find_main_xpath(
-            options["xpath_options"]["first_item"]["item_body"],
-            options["xpath_options"]["second_item"]["item_body"]
+            options["xpath_options"]["first_item"]["item_body"]["XPATH"],
+            options["xpath_options"]["second_item"]["item_body"]["XPATH"]
         )
 
         self.__set_regexp_xpath_options(self.__main_xpath, options["xpath_options"]["first_item"])
 
+    def get_webdata_items(self) -> []:
+        return self.__webdata_items
+
+    def run(self, app_links: []):
+        for app_link in app_links:
+            print("-- Started scrapping web items from: %s --" % app_link)
+            self.__webdata_items += self.__get_data_from_app(app_link)
+            print("-- Finished scrapping web items from: %s --" % app_link)
+
+        self.__sleep(*self.time_options["delay_before_close"])
+        self.driver.close()
+
     def __set_regexp_xpath_options(self, main_xpath: str, first_item: {}):
         for key, value in first_item.items():
-            self.regexp_xpath_options[key] = value.replace(main_xpath, "%s")
-            self.regexp_xpath_options[key] = re.sub(r'(%s)(\[\d+])(.*)', r'\1[%d]\3', self.regexp_xpath_options[key])
+            self.regexp_xpath_options[key]["XPATH"] = value["XPATH"].replace(main_xpath, "%s")
+            self.regexp_xpath_options[key]["XPATH"] = re.sub(r'(%s)(\[\d+])(.*)', r'\1[%d]\3', self.regexp_xpath_options[key]["XPATH"])
 
     def __set_count_items(self, count_items: int):
         self.__count_items = count_items
@@ -155,7 +167,8 @@ class Scrapper:
                 self.__create_file(self.output_file_short)
 
                 with open(self.output_file_short["name"], "a", encoding='utf-8', newline='') as file:
-                    writer_short = csv.DictWriter(file, delimiter=';', fieldnames=self.output_file_short["fields"].keys())
+                    writer_short = csv.DictWriter(file, delimiter=';',
+                                                  fieldnames=self.output_file_short["fields"].keys())
                     webdata_short_items = self.__find_short_items(website_link, writer_short)
 
                 self.__create_file(self.output_file_detail)
@@ -211,6 +224,7 @@ class Scrapper:
 
         for webdata_item in webdata_short_items:
             self.driver.get(webdata_item["detail_link"])
+            self.__waiting_anytype_selector(self.xpath_options["detail_page_title"], 120)
             webdata_item_with_details = self.__get_webdata_item_details(webdata_item)
 
             if self.__is_write_realtime:
@@ -230,11 +244,9 @@ class Scrapper:
     def __login(self, login_data: {}):
         print("Login to service")
 
-        self.__waiting_xpath(self.xpath_options["login_xpath"], 120)
-
-        login_field = self.driver.find_element(By.XPATH, self.xpath_options["login_xpath"])
-        pass_field = self.driver.find_element(By.XPATH, self.xpath_options["password_xpath"])
-        login_button = self.driver.find_element(By.XPATH, self.xpath_options["login_button_xpath"])
+        login_field = self.__waiting_anytype_selector(self.xpath_options["login_xpath"], 120)
+        pass_field = self.__waiting_anytype_selector(self.xpath_options["password_xpath"], 120)
+        login_button = self.__waiting_anytype_selector(self.xpath_options["login_button_xpath"], 120)
 
         self.actions.move_to_element(login_field).perform()
         login_field.send_keys(login_data["login"])
@@ -271,14 +283,13 @@ class Scrapper:
 
     def __find_webdata_field(self, webdata_item_num: int, field_name: str) -> WebElement:
         try:
-            field_xpath = self.regexp_xpath_options[field_name] % (self.__main_xpath, webdata_item_num)
+            field_selector = self.regexp_xpath_options[field_name]
+            field_selector["XPATH"] = field_selector["XPATH"] % (self.__main_xpath, webdata_item_num)
 
             if field_name == "item_body":
-                self.__waiting_xpath(field_xpath, 120)
+                field = self.__waiting_anytype_selector(field_selector, 120)
             else:
-                self.__waiting_xpath(field_xpath, 1)
-
-            field = self.driver.find_element(By.XPATH, field_xpath)
+                field = self.__waiting_anytype_selector(field_selector, 1)
 
             if field_name != "item_body":
                 print("%s: %s" % (field_name, field.text))
@@ -295,23 +306,16 @@ class Scrapper:
 
             if field:
                 webdata_item[field_name] = field.text
+                self.__scroll_to_webdata_item(field)
             else:
                 webdata_item[field_name] = "None"
 
         return webdata_item
 
     def __find_webdata_detail_field(self, field_name: str) -> WebElement:
-        try:
-            field_xpath = self.xpath_options["detail_fields"][field_name]
-            self.__waiting_xpath(field_xpath, 5)
-            field = self.driver.find_element(By.XPATH, field_xpath)
-
-            print("%s: %s" % (field_name, field.text))
-
-            return field
-        except NoSuchElementException:
-            print("%s has not been found!" % field_name)
-            pass
+        waiting_time = 1
+        element = self.__waiting_anytype_selector(self.xpath_options["detail_fields"][field_name], waiting_time)
+        return element
 
     def __load_more_items(self, load_button_xpath: str):
         try:
@@ -334,26 +338,28 @@ class Scrapper:
             random.randint(*self.scroll_options["scroll_delta_y"])
         ).move_to_element(webdata_item).perform()
 
-    def get_webdata_items(self) -> []:
-        return self.__webdata_items
-
-    def run(self, app_links: []):
-        for app_link in app_links:
-            print("-- Start scrapping web items from: %s --" % app_link)
-            self.__webdata_items += self.__get_data_from_app(app_link)
-
-        self.__sleep(*self.time_options["delay_before_close"])
-        self.driver.close()
-
-    def __waiting_xpath(self, xpath: str, wait_time: int):
+    def __waiting_anytype_selector(self, selector: {}, wait_time: int) -> WebElement:
         print("Waiting has been started for loading page")
-        print("-- waiting for XPATH %s --" % xpath)
-        try:
-            WebDriverWait(self.driver, wait_time).until(EC.visibility_of_element_located((By.XPATH, xpath)))
-        except TimeoutException:
-            print("Waiting ERROR for XPATH %s" % (xpath))
-            pass
-        print("Waiting has been finished for loading page")
+
+        if "XPATH" in selector:
+            print("-- waiting for XPATH %s --" % (selector["XPATH"]))
+            try:
+                element = WebDriverWait(self.driver, wait_time).until(EC.visibility_of_element_located((By.XPATH, selector["XPATH"])))
+                print("Waiting has been finished for loading page")
+                return element
+            except TimeoutException:
+                print("Waiting ERROR for XPATH %s" % (selector["XPATH"]))
+                pass
+
+        if "CSS" in selector:
+            print("-- waiting for CSS selector %s --" % (selector["CSS"]))
+            try:
+                element = WebDriverWait(self.driver, wait_time).until(EC.visibility_of_element_located((By.CSS_SELECTOR, selector["CSS"])))
+                print("Waiting has been finished for loading page")
+                return element
+            except TimeoutException:
+                print("Waiting ERROR for CSS selector %s" % (selector["CSS"]))
+                pass
 
     @staticmethod
     def __create_file(output_file: {}):

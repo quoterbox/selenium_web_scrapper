@@ -32,7 +32,7 @@ webdata_scrapper = Scrapper(
             "password": os.getenv("PASSWORD"),
         },
         # 0 - maximum
-        "maximum_count_items": 5,
+        "maximum_count_items": 10,
         "xpath_options": {
             "auth": {
                 "login_xpath": {"XPATH": "/html/body/div[1]/div/div/div[2]/div[1]/div/input"},
@@ -50,6 +50,7 @@ webdata_scrapper = Scrapper(
                     "list_fields": {
                         "item_name": {"XPATH": "/html/body/div[1]/div/div/div[3]/div[2]/div/div[1]/div/div[1]/div[1]/div[1]/div[1]/a/span"},
                         "location": {"XPATH": "/html/body/div[1]/div/div/div[3]/div[2]/div/div[1]/div/div[1]/div[1]/div[1]/div[2]/span"},
+                        # detail_link is required for loading detail data
                         "detail_link": {"XPATH": "/html/body/div[1]/div/div/div[3]/div[2]/div/div[1]/div/div[2]/a"},
                     },
                 },
@@ -119,6 +120,35 @@ webdata_scrapper = Scrapper(
         }
     }
 )
+
+# You can preload start data for list_page fields. You should specify "detail_link" field as well.
+webdata_scrapper.load_list_page_data([
+    {
+        "item_name": "First",
+        "tratata": "Tralala1",
+        "detail_link": "https://app.acquire.com/startup/aP19X5GRPchPaYMcQGzF2HeDIB43/kHQG9FFykyHmdfAZR8vM"
+    },
+    {
+        "item_name": "Two",
+        "tratata": "Tralala2",
+        "detail_link": "https://app.acquire.com/startup/1nO2ZTwZfHMRi74WIL1xuK4JZL92/hqRteQyTCVI1NtklRUPF"
+    },
+    {
+        "item_name": "Three",
+        "tratata": "Tralala3",
+        # "detail_link": "https://app.acquire.com/startup/vtLqrm9ShaRLT7aYNzRNMfMRcIV2/JMuEzQDATHucqAig3TQa"
+    },
+    {
+        "item_name": "Four",
+        "tratata": "Tralala4",
+        "detail_link": "https://app.acquire.com/startup/C9wIecOcCxcIVMelyyANFeqkGbO2/sm35Uo9OHFBeuq5WZWSL"
+    },
+    {
+        "item_name": "Five",
+        "tratata": "Tralala5",
+        "detail_link": "https://app.acquire.com/startup/cRwAFbYU7fSV5LqT5ZwlLUDZHW72/BBEugKSFbbmVdEDQJRk5"
+    }
+])
 
 webdata_scrapper.run([
     # Just for example

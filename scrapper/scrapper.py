@@ -16,6 +16,7 @@ class Scrapper:
     __main_xpath = ""
     __website = ""
     __webdata_items = []
+    __start_list_page_data = []
 
     # 0 - maximum
     __maximum_count_items = 10
@@ -59,6 +60,9 @@ class Scrapper:
 
     def get_webdata_items(self) -> []:
         return self.__webdata_items
+
+    def load_list_page_data(self, start_list_page_data: []):
+        self.__start_list_page_data = start_list_page_data
 
     def run(self, app_links: []):
         for app_link in app_links:
@@ -112,7 +116,10 @@ class Scrapper:
         self.__find_webdata_field(1, "item_body")
 
         # Step 3 - List
-        webdata_short_items = self.__find_short_items(website_link)
+        if not self.__start_list_page_data:
+            webdata_short_items = self.__find_short_items(website_link)
+        else:
+            webdata_short_items = self.__start_list_page_data
 
         # Step 4 - Details
         webdata_items = self.__find_detail_items(webdata_short_items)
@@ -145,13 +152,17 @@ class Scrapper:
         webdata_item_num = 1
 
         for webdata_item in webdata_short_items:
-            self.driver.get(webdata_item["detail_link"])
-            self.__waiting_anytype_selector(
-                self.xpath_options["detail_page"]["detail_page_waiting_tag"],
-                self.time_options["wait_detail_page"]
-            )
-            webdata_item_with_details = self.__get_webdata_item_details(webdata_item)
-            webdata_detail_items.append(webdata_item_with_details)
+            if "detail_link" in webdata_item:
+                self.driver.get(webdata_item["detail_link"])
+                self.__waiting_anytype_selector(
+                    self.xpath_options["detail_page"]["detail_page_waiting_tag"],
+                    self.time_options["wait_detail_page"]
+                )
+                webdata_item_with_details = self.__get_webdata_item_details(webdata_item)
+                webdata_detail_items.append(webdata_item_with_details)
+            else:
+                print("-- `detail_link` is required for scrapping detail data. `detail_link` field has not been found for item num - %d" % webdata_item_num)
+                webdata_detail_items.append(webdata_item)
 
             if self.__maximum_count_items != 0 and self.__maximum_count_items <= webdata_item_num:
                 break
@@ -219,7 +230,6 @@ class Scrapper:
             pass
 
     def __get_webdata_item_details(self, webdata_item: {}) -> {}:
-
         for field_name, value in self.xpath_options["detail_page"]["detail_fields"].items():
 
             field = self.__find_webdata_detail_field(field_name)

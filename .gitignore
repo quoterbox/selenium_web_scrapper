@@ -2,6 +2,7 @@
 .env
 .lock
 *__pycache__*
+*__final_files*
 *.session
 *.env
 *.csv

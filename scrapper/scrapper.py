@@ -1,4 +1,3 @@
-import csv
 import re
 import time
 import random
@@ -15,126 +14,79 @@ from selenium.webdriver.common.actions.wheel_input import ScrollOrigin
 
 class Scrapper:
     __main_xpath = ""
-    __is_write_realtime = False
     __website = ""
-    __items_class = ""
     __webdata_items = []
-    __input_file_short_data = []
 
     # 0 - maximum
-    __count_items = 10
-
-    output_file_short = {}
-    output_file_detail = {}
+    __maximum_count_items = 10
 
     login_data = {
         "login": "",
         "password": "",
     }
-    xpath_options = {
-        "login_xpath": {"XPATH": ""},
-        "password_xpath": {"XPATH": ""},
-        "login_button_xpath": {"XPATH": ""},
-        "next_page_link_xpath": {"XPATH": ""},
-        "first_item": {
-            "item_body": {"XPATH": ""},
-            "item_name": {"XPATH": ""},
-            "location": {"XPATH": ""},
-            "detail_link": {"XPATH": ""},
-        },
-        "detail_fields": {
-            "asking_price": {"XPATH": ""},
-            "asking_price_reasoning": {"XPATH": ""},
-            "date_founded": {"XPATH": ""},
-            "desc_title": {"XPATH": ""},
-            "description": {"XPATH": ""},
-            "business_model": {"XPATH": ""},
-            "tech_stack": {"XPATH": ""},
-            "product_competitors": {"XPATH": ""},
-            "growth_opportunity": {"XPATH": ""},
-            "key_assets": {"XPATH": ""},
-            "reason_selling": {"XPATH": ""},
-            "financing": {"XPATH": ""},
-            "ttm_gross_revenue": {"XPATH": ""},
-            "ttm_net_profit": {"XPATH": ""},
-            "last_months_gross_revenue": {"XPATH": ""},
-            "last_months_net_profit": {"XPATH": ""},
-            "Customers": {"XPATH": ""},
-            "annual_recurring_revenue": {"XPATH": ""},
-            "annual_growth_rate": {"XPATH": ""},
-        },
-        "second_item": {
-            "item_body": {"XPATH": ""},
-        },
-    }
-    regexp_xpath_options = {
-        "item_body": {"XPATH": ""},
-        "item_name": {"XPATH": ""},
-        "location": {"XPATH": ""},
-        "detail_link": {"XPATH": ""},
-    }
+    xpath_options = {}
+    regexp_xpath_options = {}
     time_options = {
         "delay_before_open_modal": [5, 10],
         "delay_before_close": [5, 10],
-        "delay_between_review": [1, 3]
+        "delay_between_review": [1, 3],
+        "wait_login_form": 120,
+        "wait_item_body": 120
     }
     scroll_options = {
-        "scroll_origin_x_offset": [0, 50],
-        "scroll_origin_y_offset": [0, 50],
-        "scroll_delta_x": [0, 50],
-        "scroll_delta_y": [0, 50],
+        "scroll_origin_x_offset": [0, 0],
+        "scroll_origin_y_offset": [0, 0],
+        "scroll_delta_x": [0, 0],
+        "scroll_delta_y": [0, 0],
     }
 
     def __init__(self, driver: webdriver, options: {}):
         self.driver = driver
         self.actions = ActionChains(self.driver)
         self.__website = options["website"]
-        self.__items_class = options["items_class"]
-        self.__set_write_realtime(options["write_in_file_realtime"]["write"])
-        self.__set_output_files(options["write_in_file_realtime"]["output_files"])
-        self.__set_input_file(options["input_file_short_data"])
         self.__set_login_data(options["login_data"])
-        self.__set_count_items(options["count_items"])
+        self.__set_maximum_count_items(options["maximum_count_items"])
         self.__set_xpath_options(options["xpath_options"])
         self.__set_time_options(options["time_options"])
         self.__set_scroll_options(options["scroll_options"])
 
         self.__main_xpath = self.__find_main_xpath(
-            options["xpath_options"]["first_item"]["item_body"]["XPATH"],
-            options["xpath_options"]["second_item"]["item_body"]["XPATH"]
+            options["xpath_options"]["list_page"]["first_item"]["item_body"]["XPATH"],
+            options["xpath_options"]["list_page"]["second_item"]["item_body"]["XPATH"]
         )
 
-        self.__set_regexp_xpath_options(self.__main_xpath, options["xpath_options"]["first_item"])
+        self.__set_regexp_xpath_options(self.__main_xpath, options["xpath_options"]["list_page"]["first_item"])
 
     def get_webdata_items(self) -> []:
         return self.__webdata_items
 
     def run(self, app_links: []):
         for app_link in app_links:
-            print("-- Started scrapping web items from: %s --" % app_link)
+            print("-- Started scraping web items from: %s --" % app_link)
             self.__webdata_items += self.__get_data_from_app(app_link)
-            print("-- Finished scrapping web items from: %s --" % app_link)
+            print("-- Finished scraping web items from: %s --" % app_link)
 
         self.__sleep(*self.time_options["delay_before_close"])
         self.driver.close()
 
     def __set_regexp_xpath_options(self, main_xpath: str, first_item: {}):
         for key, value in first_item.items():
-            self.regexp_xpath_options[key]["XPATH"] = value["XPATH"].replace(main_xpath, "%s")
-            self.regexp_xpath_options[key]["XPATH"] = re.sub(r'(%s)(\[\d+])(.*)', r'\1[%d]\3', self.regexp_xpath_options[key]["XPATH"])
+            if key == "list_fields":
+                for list_fields_key, list_fields_value in value.items():
+                    self.__replace_xpath(main_xpath, list_fields_key, list_fields_value)
+            else:
+                self.__replace_xpath(main_xpath, key, value)
 
-    def __set_count_items(self, count_items: int):
-        self.__count_items = count_items
+    def __replace_xpath(self, main_xpath: str, field_key: {}, field_value: {}):
+        self.regexp_xpath_options[field_key] = {}
+        self.regexp_xpath_options[field_key]["XPATH"] = field_value["XPATH"].replace(main_xpath, "%s")
+        self.regexp_xpath_options[field_key]["XPATH"] = re.sub(
+            r'(%s)(\[\d+])(.*)', r'\1[%d]\3',
+            self.regexp_xpath_options[field_key]["XPATH"]
+        )
 
-    def __set_write_realtime(self, is_write_realtime: bool):
-        self.__is_write_realtime = is_write_realtime
-
-    def __set_output_files(self, output_files: {}):
-        self.output_file_short = output_files["output_file_short"]
-        self.output_file_detail = output_files["output_file_detail"]
-
-    def __set_input_file(self, webdata_short_items: []):
-        self.__input_file_short_data = webdata_short_items
+    def __set_maximum_count_items(self, maximum_count_items: int):
+        self.__maximum_count_items = maximum_count_items
 
     def __set_login_data(self, login_data: {}):
         self.login_data = login_data
@@ -159,35 +111,11 @@ class Scrapper:
         # The first loading for accept cookies
         self.__find_webdata_field(1, "item_body")
 
-        # Step 3
-        if self.__is_write_realtime:
+        # Step 3 - List
+        webdata_short_items = self.__find_short_items(website_link)
 
-            # List
-            if not self.__input_file_short_data:
-                self.__create_file(self.output_file_short)
-
-                with open(self.output_file_short["name"], "a", encoding='utf-8', newline='') as file:
-                    writer_short = csv.DictWriter(file, delimiter=';',
-                                                  fieldnames=self.output_file_short["fields"].keys())
-                    webdata_short_items = self.__find_short_items(website_link, writer_short)
-
-                self.__create_file(self.output_file_detail)
-            else:
-                webdata_short_items = self.__input_file_short_data
-
-            # Details
-            with open(self.output_file_detail["name"], "a", encoding='utf-8', newline='') as file:
-                writer_detail = csv.DictWriter(file, delimiter=';', fieldnames=self.output_file_detail["fields"].keys())
-                webdata_items = self.__find_detail_items(webdata_short_items, writer_detail)
-        else:
-            # List
-            if not self.__input_file_short_data:
-                webdata_short_items = self.__find_short_items(website_link)
-            else:
-                webdata_short_items = self.__input_file_short_data
-
-            # Details
-            webdata_items = self.__find_detail_items(webdata_short_items)
+        # Step 4 - Details
+        webdata_items = self.__find_detail_items(webdata_short_items)
 
         return webdata_items
 
@@ -197,21 +125,15 @@ class Scrapper:
         webdata_item_num = 1
         while True:
             webdata_short_item = self.__get_webdata_item_from_app(webdata_item_num)
-
-            if self.__is_write_realtime:
-                writer = args[0]
-                writer.writerow(webdata_short_item)
-
             webdata_short_items.append(webdata_short_item)
 
-            if self.__count_items != 0 and self.__count_items <= webdata_item_num:
+            if self.__maximum_count_items != 0 and self.__maximum_count_items <= webdata_item_num:
                 break
 
-            page_elements_count = len(self.driver.find_elements(By.CSS_SELECTOR, self.__items_class))
-
+            page_elements_count = len(self.driver.find_elements(By.CSS_SELECTOR, self.xpath_options["load_page"]["items_class"]))
             if page_elements_count <= webdata_item_num:
                 self.__sleep(*self.time_options["delay_before_open_next_page"])
-                self.__load_more_items(self.xpath_options["next_page_link_xpath"])
+                self.__load_more_items(self.xpath_options["load_page"]["next_page_link_xpath"])
 
             webdata_item_num = webdata_item_num + 1
             self.__sleep(*self.time_options["delay_between_item"])
@@ -224,16 +146,14 @@ class Scrapper:
 
         for webdata_item in webdata_short_items:
             self.driver.get(webdata_item["detail_link"])
-            self.__waiting_anytype_selector(self.xpath_options["detail_page_title"], 120)
+            self.__waiting_anytype_selector(
+                self.xpath_options["detail_page"]["detail_page_waiting_tag"],
+                self.time_options["wait_detail_page"]
+            )
             webdata_item_with_details = self.__get_webdata_item_details(webdata_item)
-
-            if self.__is_write_realtime:
-                writer = args[0]
-                writer.writerow(webdata_item_with_details)
-
             webdata_detail_items.append(webdata_item_with_details)
 
-            if self.__count_items != 0 and self.__count_items <= webdata_item_num:
+            if self.__maximum_count_items != 0 and self.__maximum_count_items <= webdata_item_num:
                 break
 
             webdata_item_num = webdata_item_num + 1
@@ -244,20 +164,16 @@ class Scrapper:
     def __login(self, login_data: {}):
         print("Login to service")
 
-        login_field = self.__waiting_anytype_selector(self.xpath_options["login_xpath"], 120)
-        pass_field = self.__waiting_anytype_selector(self.xpath_options["password_xpath"], 120)
-        login_button = self.__waiting_anytype_selector(self.xpath_options["login_button_xpath"], 120)
+        login_field = self.__waiting_anytype_selector(self.xpath_options["auth"]["login_xpath"], self.time_options["wait_login_form"])
+        pass_field = self.__waiting_anytype_selector(self.xpath_options["auth"]["password_xpath"], self.time_options["wait_login_form"])
+        login_button = self.__waiting_anytype_selector(self.xpath_options["auth"]["login_button_xpath"], self.time_options["wait_login_form"])
 
         self.actions.move_to_element(login_field).perform()
         login_field.send_keys(login_data["login"])
-
         self.__sleep(2, 5)
-
         self.actions.move_to_element(pass_field).perform()
         pass_field.send_keys(login_data["password"])
-
         self.__sleep(2, 5)
-
         self.actions.move_to_element(login_button).perform()
         self.actions.click(login_button).perform()
 
@@ -274,6 +190,8 @@ class Scrapper:
                     self.__scroll_to_webdata_item(field)
                 elif field_name == "detail_link":
                     webdata_item[field_name] = field.get_attribute("href")
+                    if not re.findall("http(s)?://", webdata_item[field_name]):
+                        webdata_item[field_name] = self.__website + webdata_item[field_name]
                 else:
                     webdata_item[field_name] = field.text
             else:
@@ -283,15 +201,17 @@ class Scrapper:
 
     def __find_webdata_field(self, webdata_item_num: int, field_name: str) -> WebElement:
         try:
+            main_xpath_test = self.__main_xpath
             field_selector = self.regexp_xpath_options[field_name]
-            field_selector["XPATH"] = field_selector["XPATH"] % (self.__main_xpath, webdata_item_num)
+            field_to_find = {"XPATH": field_selector["XPATH"] % (main_xpath_test, webdata_item_num)}
 
             if field_name == "item_body":
-                field = self.__waiting_anytype_selector(field_selector, 120)
+                field = self.__waiting_anytype_selector(field_to_find, self.time_options["wait_item_body"])
             else:
-                field = self.__waiting_anytype_selector(field_selector, 1)
+                field = self.__waiting_anytype_selector(field_to_find, 1)
 
-            if field_name != "item_body":
+            if field_name != "item_body" and field:
+                print("field_name - %s" % field_name)
                 print("%s: %s" % (field_name, field.text))
             return field
         except NoSuchElementException:
@@ -300,7 +220,7 @@ class Scrapper:
 
     def __get_webdata_item_details(self, webdata_item: {}) -> {}:
 
-        for field_name, value in self.xpath_options["detail_fields"].items():
+        for field_name, value in self.xpath_options["detail_page"]["detail_fields"].items():
 
             field = self.__find_webdata_detail_field(field_name)
 
@@ -314,7 +234,7 @@ class Scrapper:
 
     def __find_webdata_detail_field(self, field_name: str) -> WebElement:
         waiting_time = 1
-        element = self.__waiting_anytype_selector(self.xpath_options["detail_fields"][field_name], waiting_time)
+        element = self.__waiting_anytype_selector(self.xpath_options["detail_page"]["detail_fields"][field_name], waiting_time)
         return element
 
     def __load_more_items(self, load_button_xpath: str):
@@ -360,12 +280,6 @@ class Scrapper:
             except TimeoutException:
                 print("Waiting ERROR for CSS selector %s" % (selector["CSS"]))
                 pass
-
-    @staticmethod
-    def __create_file(output_file: {}):
-        with open(output_file["name"], "w", encoding='utf-8', newline='') as file:
-            writer = csv.DictWriter(file, delimiter=';', fieldnames=output_file["fields"].keys())
-            writer.writerow(output_file["fields"])
 
     @staticmethod
     def __find_main_xpath(first_xpath: str, second_xpath: str) -> str:

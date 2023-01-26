@@ -1,25 +1,34 @@
 import os
-import csv
+import datetime
 from dotenv import load_dotenv
 from selenium import webdriver
 from scrapper.scrapper import Scrapper
+from scrapper.scrapper_saver import ScrapperSaver
+
+start_time = datetime.datetime.now()
 
 load_dotenv()
 
 chrome_options = webdriver.ChromeOptions()
 chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.5060.134 Safari/537.36 OPR/89.0.4447.71")
-#chrome_options.add_argument('--disable-gpu')
-chrome_options.add_argument('--window-size=1600,900')
+# chrome_options.add_argument('--disable-gpu')
+chrome_options.add_argument('--window-size=1400,800')
 chrome_options.add_argument('--no-sandbox')
 chrome_options.add_argument('--start-maximized')
 chrome_options.add_argument('--disable-setuid-sandbox')
 chrome_options.add_argument('--disk-cache-size=0')
 
 # Yes / No browser visualization
-# chrome_options.headless = True
+chrome_options.add_argument('--headless')
 
 driver = webdriver.Chrome(options=chrome_options)
 driver.delete_all_cookies()
+
+saver = ScrapperSaver({
+    "list_page": "list_temp_file.csv",
+    "detail_page": "detail_temp_file.csv",
+    "all_items": "all_items.csv"
+})
 
 webdata_scrapper = Scrapper(
     driver,
@@ -118,53 +127,49 @@ webdata_scrapper = Scrapper(
             "scroll_delta_x": [0, 0],
             "scroll_delta_y": [0, 0],
         }
-    }
+    },
+    # if you want to keep temporary results and not lose data if something goes wrong
+    saver
 )
 
 # You can preload start data for list_page fields. You should specify "detail_link" field as well.
-webdata_scrapper.load_list_page_data([
-    {
-        "item_name": "First",
-        "tratata": "Tralala1",
-        "detail_link": "https://app.acquire.com/startup/aP19X5GRPchPaYMcQGzF2HeDIB43/kHQG9FFykyHmdfAZR8vM"
-    },
-    {
-        "item_name": "Two",
-        "tratata": "Tralala2",
-        "detail_link": "https://app.acquire.com/startup/1nO2ZTwZfHMRi74WIL1xuK4JZL92/hqRteQyTCVI1NtklRUPF"
-    },
-    {
-        "item_name": "Three",
-        "tratata": "Tralala3",
-        # "detail_link": "https://app.acquire.com/startup/vtLqrm9ShaRLT7aYNzRNMfMRcIV2/JMuEzQDATHucqAig3TQa"
-    },
-    {
-        "item_name": "Four",
-        "tratata": "Tralala4",
-        "detail_link": "https://app.acquire.com/startup/C9wIecOcCxcIVMelyyANFeqkGbO2/sm35Uo9OHFBeuq5WZWSL"
-    },
-    {
-        "item_name": "Five",
-        "tratata": "Tralala5",
-        "detail_link": "https://app.acquire.com/startup/cRwAFbYU7fSV5LqT5ZwlLUDZHW72/BBEugKSFbbmVdEDQJRk5"
-    }
-])
+# webdata_scrapper.load_list_page_data([
+#     {
+#         "item_name": "First",
+#         "tratata": "Tralala1",
+#         "detail_link": "https://app.acquire.com/startup/aP19X5GRPchPaYMcQGzF2HeDIB43/kHQG9FFykyHmdfAZR8vM"
+#     },
+#     {
+#         "item_name": "Two",
+#         "tratata": "Tralala2",
+#         "detail_link": "https://app.acquire.com/startup/1nO2ZTwZfHMRi74WIL1xuK4JZL92/hqRteQyTCVI1NtklRUPF"
+#     },
+#     {
+#         "item_name": "Three",
+#         "tratata": "Tralala3",
+#         # "detail_link": "https://app.acquire.com/startup/vtLqrm9ShaRLT7aYNzRNMfMRcIV2/JMuEzQDATHucqAig3TQa"
+#     },
+#     {
+#         "item_name": "Four",
+#         "tratata": "Tralala4",
+#         "detail_link": "https://app.acquire.com/startup/C9wIecOcCxcIVMelyyANFeqkGbO2/sm35Uo9OHFBeuq5WZWSL"
+#     },
+#     {
+#         "item_name": "Five",
+#         "tratata": "Tralala5",
+#         "detail_link": "https://app.acquire.com/startup/cRwAFbYU7fSV5LqT5ZwlLUDZHW72/BBEugKSFbbmVdEDQJRk5"
+#     }
+# ])
 
 webdata_scrapper.run([
+    # You can specify many list pages from one website
     # Just for example
     "https://app.acquire.com/marketplace",
 ])
 
-webdata_items = webdata_scrapper.get_webdata_items()
-fields = dict(zip(webdata_items[0].keys(), webdata_items[0].keys()))
+all_items = webdata_scrapper.get_webdata_items()
+saver.save_all_items(all_items)
 
-output_file = "web_items.csv"
-with open(output_file, "a", encoding='utf-8', newline='') as file:
-    writer = csv.DictWriter(file, delimiter=';', fieldnames=fields.keys())
-    writer.writerow(fields)
-with open(output_file, "a", encoding='utf-8', newline='') as file:
-    writer = csv.DictWriter(file, delimiter=';', fieldnames=fields.keys())
-    for webdata_item in webdata_items:
-        writer.writerow(webdata_item)
-
+delta_time = datetime.datetime.now() - start_time
+print("Time of execution: %s" % str(delta_time))
 print("Records has been successfully saved to the file!")

@@ -11,8 +11,12 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.actions.wheel_input import ScrollOrigin
 
+from scrapper.scrapper_saver import ScrapperSaver
+
 
 class Scrapper:
+    driver = False
+    saver = False
     __main_xpath = ""
     __website = ""
     __webdata_items = []
@@ -41,8 +45,10 @@ class Scrapper:
         "scroll_delta_y": [0, 0],
     }
 
-    def __init__(self, driver: webdriver, options: {}):
+    def __init__(self, driver: webdriver, options: {}, *args):
         self.driver = driver
+        if args:
+            self.saver = args[0]
         self.actions = ActionChains(self.driver)
         self.__website = options["website"]
         self.__set_login_data(options["login_data"])
@@ -134,6 +140,9 @@ class Scrapper:
             webdata_short_item = self.__get_webdata_item_from_app(webdata_item_num)
             webdata_short_items.append(webdata_short_item)
 
+            if self.saver:
+                self.saver.save_list_page_row(webdata_short_item)
+
             if self.__maximum_count_items != 0 and self.__maximum_count_items <= webdata_item_num:
                 break
 
@@ -160,9 +169,15 @@ class Scrapper:
                 )
                 webdata_item_with_details = self.__get_webdata_item_details(webdata_item)
                 webdata_detail_items.append(webdata_item_with_details)
+
+                if self.saver:
+                    self.saver.save_detail_page_row(webdata_item_with_details)
             else:
                 print("-- `detail_link` is required for scrapping detail data. `detail_link` field has not been found for item num - %d" % webdata_item_num)
                 webdata_detail_items.append(webdata_item)
+
+                if self.saver:
+                    self.saver.save_detail_page_row(webdata_item)
 
             if self.__maximum_count_items != 0 and self.__maximum_count_items <= webdata_item_num:
                 break
@@ -200,11 +215,9 @@ class Scrapper:
                 if field_name == "item_body":
                     self.__scroll_to_webdata_item(field)
                 elif field_name == "detail_link":
-                    webdata_item[field_name] = field.get_attribute("href")
-                    if not re.findall("http(s)?://", webdata_item[field_name]):
-                        webdata_item[field_name] = self.__website + webdata_item[field_name]
+                    webdata_item[field_name] = self.__format_uri(field.get_attribute("href"))
                 else:
-                    webdata_item[field_name] = field.text
+                    webdata_item[field_name] = self.__clear_string(field.text)
             else:
                 webdata_item[field_name] = "None"
 
@@ -235,7 +248,7 @@ class Scrapper:
             field = self.__find_webdata_detail_field(field_name)
 
             if field:
-                webdata_item[field_name] = field.text
+                webdata_item[field_name] = self.__clear_string(field.text)
                 self.__scroll_to_webdata_item(field)
             else:
                 webdata_item[field_name] = "None"
@@ -291,6 +304,11 @@ class Scrapper:
                 print("Waiting ERROR for CSS selector %s" % (selector["CSS"]))
                 pass
 
+    def __format_uri(self, uri: str) -> str:
+        if not re.findall("http(s)?://", uri):
+            uri = self.__website + uri
+        return uri
+
     @staticmethod
     def __find_main_xpath(first_xpath: str, second_xpath: str) -> str:
         if len(first_xpath) != len(second_xpath):
@@ -313,6 +331,6 @@ class Scrapper:
         time.sleep(random.randint(min_time, max_time))
 
     @staticmethod
-    def clear_string(string: str) -> str:
+    def __clear_string(string: str) -> str:
         special_characters = [";", "\t", "\n", "\r", "\n\r", "<", ">"]
         return ''.join(filter(lambda i: i not in special_characters, string)).strip()

@@ -1,5 +1,6 @@
 import re
 import time
+import datetime
 import random
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -51,7 +52,8 @@ class Scrapper:
             self.saver = args[0]
         self.actions = ActionChains(self.driver)
         self.__website = options["website"]
-        self.__set_login_data(options["login_data"])
+        if "login_data" in options:
+            self.__set_login_data(options["login_data"])
         self.__set_maximum_count_items(options["maximum_count_items"])
         self.__set_xpath_options(options["xpath_options"])
         self.__set_time_options(options["time_options"])
@@ -71,13 +73,18 @@ class Scrapper:
         self.__start_list_page_data = start_list_page_data
 
     def run(self, app_links: []):
+
+        start_time = datetime.datetime.now()
+
         for app_link in app_links:
-            print("-- Started scraping web items from: %s --" % app_link)
+            print("-- Scraping has been started from: %s --" % app_link)
             self.__webdata_items += self.__get_data_from_app(app_link)
-            print("-- Finished scraping web items from: %s --" % app_link)
+            print("-- Scraping has been finished from: %s --" % app_link)
 
         self.__sleep(*self.time_options["delay_before_close"])
         self.driver.close()
+
+        self.__count_time(start_time, datetime.datetime.now())
 
     def __set_regexp_xpath_options(self, main_xpath: str, first_item: {}):
         for key, value in first_item.items():
@@ -116,7 +123,8 @@ class Scrapper:
         self.driver.get(website_link)
 
         # Step 2
-        self.__login(self.login_data)
+        if self.login_data:
+            self.__login(self.login_data)
 
         # The first loading for accept cookies
         self.__find_webdata_field(1, "item_body")
@@ -173,7 +181,8 @@ class Scrapper:
                 if self.saver:
                     self.saver.save_detail_page_row(webdata_item_with_details)
             else:
-                print("-- `detail_link` is required for scrapping detail data. `detail_link` field has not been found for item num - %d" % webdata_item_num)
+                print("-- `detail_link` is required for scrapping detail data. "
+                      "`detail_link` field has not been found for item num - %d" % webdata_item_num)
                 webdata_detail_items.append(webdata_item)
 
                 if self.saver:
@@ -282,32 +291,40 @@ class Scrapper:
         ).move_to_element(webdata_item).perform()
 
     def __waiting_anytype_selector(self, selector: {}, wait_time: int) -> WebElement:
-        print("Waiting has been started for loading page")
+        print("Waiting for selector or XPATH has been started")
 
         if "XPATH" in selector:
-            print("-- waiting for XPATH %s --" % (selector["XPATH"]))
+            print("-- Waiting for XPATH %s --" % (selector["XPATH"]))
             try:
                 element = WebDriverWait(self.driver, wait_time).until(EC.visibility_of_element_located((By.XPATH, selector["XPATH"])))
-                print("Waiting has been finished for loading page")
+                print("Waiting has been finished for XPATH %s" % selector["XPATH"])
                 return element
             except TimeoutException:
-                print("Waiting ERROR for XPATH %s" % (selector["XPATH"]))
+                print("Waiting ERROR for XPATH %s" % selector["XPATH"])
                 pass
 
         if "CSS" in selector:
-            print("-- waiting for CSS selector %s --" % (selector["CSS"]))
+            print("-- Waiting for CSS selector %s --" % selector["CSS"])
             try:
                 element = WebDriverWait(self.driver, wait_time).until(EC.visibility_of_element_located((By.CSS_SELECTOR, selector["CSS"])))
-                print("Waiting has been finished for loading page")
+                print("Waiting has been finished for CSS selector %s" % selector["CSS"])
                 return element
             except TimeoutException:
-                print("Waiting ERROR for CSS selector %s" % (selector["CSS"]))
+                print("Waiting ERROR for CSS selector %s" % selector["CSS"])
                 pass
 
     def __format_uri(self, uri: str) -> str:
         if not re.findall("http(s)?://", uri):
             uri = self.__website + uri
         return uri
+
+    @staticmethod
+    def __count_time(start_time, end_time):
+        delta_time = end_time - start_time
+        dt_days = delta_time.days
+        dt_hours, mod_sec = divmod(delta_time.seconds, 3600)
+        dt_minutes, dt_seconds = divmod(mod_sec, 60)
+        print("Time of execution: %s days %sh %sm %ss" % (dt_days, dt_hours, dt_minutes, dt_seconds))
 
     @staticmethod
     def __find_main_xpath(first_xpath: str, second_xpath: str) -> str:

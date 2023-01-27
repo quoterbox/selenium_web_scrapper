@@ -1,11 +1,8 @@
 import os
-import datetime
 from dotenv import load_dotenv
 from selenium import webdriver
 from scrapper.scrapper import Scrapper
 from scrapper.scrapper_saver import ScrapperSaver
-
-start_time = datetime.datetime.now()
 
 load_dotenv()
 
@@ -18,12 +15,14 @@ chrome_options.add_argument('--start-maximized')
 chrome_options.add_argument('--disable-setuid-sandbox')
 chrome_options.add_argument('--disk-cache-size=0')
 
-# Yes / No browser visualization
+# Comment this options if you want to see browser visualization
 chrome_options.add_argument('--headless')
 
 driver = webdriver.Chrome(options=chrome_options)
 driver.delete_all_cookies()
 
+# You can use your own solution for saving the data
+# To get the data just use `scrapper.get_webdata_items()` method
 saver = ScrapperSaver({
     "list_page": "list_temp_file.csv",
     "detail_page": "detail_temp_file.csv",
@@ -41,7 +40,7 @@ webdata_scrapper = Scrapper(
             "password": os.getenv("PASSWORD"),
         },
         # 0 - maximum
-        "maximum_count_items": 10,
+        "maximum_count_items": 3,
         "xpath_options": {
             "auth": {
                 "login_xpath": {"XPATH": "/html/body/div[1]/div/div/div[2]/div[1]/div/input"},
@@ -132,7 +131,7 @@ webdata_scrapper = Scrapper(
     saver
 )
 
-# You can preload start data for list_page fields. You should specify "detail_link" field as well.
+# # You can preload start data for list_page fields. You should specify "detail_link" field as well.
 # webdata_scrapper.load_list_page_data([
 #     {
 #         "item_name": "First",
@@ -169,7 +168,3 @@ webdata_scrapper.run([
 
 all_items = webdata_scrapper.get_webdata_items()
 saver.save_all_items(all_items)
-
-delta_time = datetime.datetime.now() - start_time
-print("Time of execution: %s" % str(delta_time))
-print("Records has been successfully saved to the file!")

@@ -16,3 +16,9 @@
 4. Download Chromedriver for yor own Google Chrome version (or your own, Gecko driver for Firefox etc.), from this page:
 https://chromedriver.chromium.org and put it next to the `main.py` file.
 5. To start python script: `pipenv run py main.py` or `pipenv run python main.py`
+
+### License
+[MIT License](./LICENSE.md)
+
+### Author
+[JQ/Quoterbox](https://github.com/quoterbox)

@@ -40,7 +40,7 @@ webdata_scrapper = Scrapper(
             "password": os.getenv("PASSWORD"),
         },
         # 0 - maximum
-        "maximum_count_items": 3,
+        "maximum_count_items": 10,
         "xpath_options": {
             "auth": {
                 "login_xpath": {"XPATH": "/html/body/div[1]/div/div/div[2]/div[1]/div/input"},
